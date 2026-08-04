@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Thank You — Glow Studio{% endblock %}
+
+{% block content %}
+<div class="empty-state">
+    <span class="empty-icon">🎉</span>
+    <h3>Thanks for your review!</h3>
+    <p>
+        You rated <strong>{{ booking.service.name }}</strong>
+        {{ "★" * review.rating }}{{ "☆" * (5 - review.rating) }} ({{ review.rating }}/5)
+    </p>
+    {% if review.comment %}
+    <p class="muted" style="max-width:480px;margin:0 auto 20px;font-style:italic">"{{ review.comment }}"</p>
+    {% endif %}
+
+    <a href="{{ whatsapp_link }}" target="_blank" rel="noopener" class="btn-pill"
+       style="background:#25D366;color:#fff;margin-bottom:12px">
+        Share on WhatsApp
+    </a>
+    <br>
+    <a href="{{ url_for('booking.my_bookings') }}" class="btn-link">Back to My Bookings</a>
+</div>
+{% endblock %}

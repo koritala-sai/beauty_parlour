@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Glow Studio — Premium Salon & Beauty Parlour{% endblock %}</title>
+    <meta name="description"
+        content="{% block meta_description %}Glow Studio offers expert hair styling, skincare, nail art, and bridal beauty services. Book your appointment online in seconds.{% endblock %}">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <!-- PWA setup -->
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#6b2737">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+</head>
+
+<body>
+    <script>
+        if ("serviceWorker" in navigator) {
+            window.addEventListener("load", () => {
+                navigator.serviceWorker.register("/sw.js").catch((err) => {
+                    console.warn("Service worker registration failed:", err);
+                });
+            });
+        }
+    </script>
+    <header class="navbar">
+        <a href="{{ url_for('main.home') }}" class="brand-group">
+            <span class="logo-badge">G</span>
+            <span class="brand-name">Glow Studio</span>
+        </a>
+
+        <button class="hamburger" id="hamburger" aria-label="Toggle navigation" aria-expanded="false">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+
+        <nav id="main-nav">
+            <a href="{{ url_for('main.services') }}" {% if request.endpoint=='main.services' %}class="active"{% endif %}>Services</a>
+            {% if current_user.is_authenticated %}
+                <span class="nav-user-greeting">Welcome, <strong>{{ current_user.name }}</strong></span>
+                {% if current_user.is_admin %}
+                    <a href="{{ url_for('admin.dashboard') }}" {% if 'admin.' in (request.endpoint or '') %}class="active"{% endif %}>Admin Dashboard</a>
+                {% else %}
+                    <a href="{{ url_for('booking.my_bookings') }}" {% if request.endpoint=='booking.my_bookings' %}class="active"{% endif %}>My Bookings</a>
+                {% endif %}
+                <a href="{{ url_for('auth.logout') }}">Logout</a>
+            {% else %}
+                <a href="{{ url_for('auth.login') }}" {% if request.endpoint=='auth.login' %}class="active"{% endif %}>Login</a>
+                <a href="{{ url_for('auth.register') }}" {% if request.endpoint=='auth.register' %}class="active"{% endif %}>Sign Up</a>
+            {% endif %}
+            {% if not current_user.is_authenticated or not current_user.is_admin %}
+                <a href="{{ url_for('main.services') }}" class="btn-pill">Book Now</a>
+            {% endif %}
+        </nav>
+    </header>
+
+    <main class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="flash flash-{{ category }}" role="alert">
+            <span class="flash-body">{{ message }}</span>
+            <button class="flash-close" onclick="this.parentElement.remove()" aria-label="Dismiss">✕</button>
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+        <div class="footer-grid">
+            <div class="foot">
+                <p class="brand" style="font-size:1.4rem">Glow Studio</p>
+                <p class="muted">Where style meets comfort. Premium hair and beauty
+                    services with expert stylists and a warm, welcoming atmosphere.</p>
+            </div>
+            <div>
+                <h4>Quick Links</h4>
+                <p><a href="{{ url_for('main.home') }}">Home</a></p>
+                <p><a href="{{ url_for('main.services') }}">Services</a></p>
+                {% if current_user.is_authenticated %}
+                <p><a href="{{ url_for('booking.my_bookings') }}">My Bookings</a></p>
+                {% endif %}
+            </div>
+            <div>
+                <h4>Contact</h4>
+                <p class="muted">+91 9059302359</p>
+                <p class="muted">hello@glowstudio.com</p>
+                <p class="muted">123 MG Road, Guntur, AP</p>
+                <p class="footer-social">
+                    <a href="https://instagram.com/glowstudio" target="_blank" rel="noopener">Instagram</a>
+                    &nbsp;·&nbsp;
+                    <a href="mailto:hello@glowstudio.com">hello@glowstudio.com</a>
+                </p>
+            </div>
+            <div class="business-hours">
+                <h4>Business Hours</h4>
+                <p class="muted">Mon – Sat: 10:00 AM – 8:00 PM</p>
+                <p class="muted">Sunday: 11:00 AM – 9:00 PM</p>
+            </div>
+        </div>
+        <p class="footer-bottom">© 2026 Glow Studio. Built for a smoother booking experience.</p>
+    </footer>
+
+    <script>
+        // Hamburger menu
+        const hamburger = document.getElementById('hamburger');
+        const nav = document.getElementById('main-nav');
+        if (hamburger && nav) {
+            hamburger.addEventListener('click', () => {
+                const isOpen = nav.classList.toggle('open');
+                hamburger.classList.toggle('open', isOpen);
+                hamburger.setAttribute('aria-expanded', isOpen);
+            });
+            // Close on outside click
+            document.addEventListener('click', (e) => {
+                if (!hamburger.contains(e.target) && !nav.contains(e.target)) {
+                    nav.classList.remove('open');
+                    hamburger.classList.remove('open');
+                    hamburger.setAttribute('aria-expanded', 'false');
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>

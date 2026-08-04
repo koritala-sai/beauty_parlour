@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Sign Up — Glow Studio{% endblock %}
+{% block meta_description %}Create your Glow Studio account to book hair, beauty, and spa appointments online.{% endblock %}
+
+{% block content %}
+<p class="eyebrow">Join Us</p>
+<h1>Create an Account</h1>
+<div class="divider left"><span class="mark"></span></div>
+
+<form method="POST" class="form" autocomplete="on">
+    <label for="name">Full Name</label>
+    <input type="text" name="name" id="name" required
+           autocomplete="name" placeholder="e.g. Priya Sharma">
+
+    <label for="email">Email Address</label>
+    <input type="email" name="email" id="email" required
+           autocomplete="email" placeholder="you@example.com">
+
+    <label for="phone">Phone Number <span class="muted">(optional)</span></label>
+    <input type="tel" name="phone" id="phone"
+           autocomplete="tel" placeholder="+91 98765 43210">
+    <p class="pw-hint">We'll only use this for appointment reminders.</p>
+
+    <label for="password">Password</label>
+    <div class="input-toggle-wrap">
+        <input type="password" name="password" id="password" required
+               autocomplete="new-password" placeholder="Create a strong password">
+        <button type="button" class="toggle-pw" id="toggle-pw" aria-label="Show password">
+            <svg id="eye-icon" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+    </div>
+    <!-- Password strength indicator -->
+    <div class="pw-strength" aria-hidden="true">
+        <div class="pw-strength-bar" id="pw-strength-bar"></div>
+    </div>
+    <p class="pw-hint" id="pw-strength-label">Enter a password to see strength</p>
+
+    <button type="submit" class="btn" id="register-btn">Create Account</button>
+</form>
+<p style="margin-top:20px">Already have an account? <a href="{{ url_for('auth.login') }}" style="color:var(--wine);font-weight:600">Login</a></p>
+
+<script>
+    // Show/hide password toggle
+    const pwInput = document.getElementById('password');
+    const toggleBtn = document.getElementById('toggle-pw');
+    const eyeIcon = document.getElementById('eye-icon');
+
+    if (toggleBtn && pwInput) {
+        toggleBtn.addEventListener('click', () => {
+            const isText = pwInput.type === 'text';
+            pwInput.type = isText ? 'password' : 'text';
+            eyeIcon.innerHTML = isText
+                ? '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>'
+                : '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+            toggleBtn.setAttribute('aria-label', isText ? 'Show password' : 'Hide password');
+        });
+    }
+
+    // Password strength meter
+    const bar = document.getElementById('pw-strength-bar');
+    const label = document.getElementById('pw-strength-label');
+
+    function checkStrength(pw) {
+        let score = 0;
+        if (pw.length >= 8) score++;
+        if (/[A-Z]/.test(pw)) score++;
+        if (/[0-9]/.test(pw)) score++;
+        if (/[^A-Za-z0-9]/.test(pw)) score++;
+        return score;
+    }
+
+    if (pwInput && bar && label) {
+        pwInput.addEventListener('input', () => {
+            const pw = pwInput.value;
+            if (!pw) {
+                bar.className = 'pw-strength-bar';
+                bar.style.width = '0';
+                label.textContent = 'Enter a password to see strength';
+                return;
+            }
+            const score = checkStrength(pw);
+            bar.className = 'pw-strength-bar';
+            if (score <= 1) {
+                bar.classList.add('weak');
+                label.textContent = 'Weak — try adding uppercase, numbers or symbols';
+            } else if (score === 2 || score === 3) {
+                bar.classList.add('medium');
+                label.textContent = 'Medium — getting stronger!';
+            } else {
+                bar.classList.add('strong');
+                label.textContent = 'Strong password ✓';
+            }
+        });
+    }
+</script>
+{% endblock %}

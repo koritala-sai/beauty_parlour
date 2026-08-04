@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Leave a Review — Glow Studio{% endblock %}
+
+{% block content %}
+<p class="eyebrow">Share Your Experience</p>
+<h1>Review: {{ booking.service.name if booking.service else 'Your Service' }}</h1>
+<div class="divider left"><span class="mark"></span></div>
+
+<form method="POST" class="form" style="max-width:480px">
+    <label>Your Rating</label>
+    <div class="star-input" id="star-input" role="radiogroup" aria-label="Star rating">
+        {% for i in range(1, 6) %}
+        <button type="button" class="star-btn" data-value="{{ i }}" onclick="setRating({{ i }})" aria-label="{{ i }} star">★</button>
+        {% endfor %}
+    </div>
+    <input type="hidden" name="rating" id="rating-input" value="0" required>
+
+    <label for="comment">Your Review <span class="muted">(optional)</span></label>
+    <textarea name="comment" id="comment" rows="4"
+        placeholder="Tell others what you loved about your visit..."></textarea>
+
+    <button type="submit" class="btn" id="submit-review-btn">Submit Review</button>
+</form>
+
+<p class="muted" style="margin-top:20px;font-size:0.85rem;max-width:480px">
+    Prefer WhatsApp? You can also
+    <a href="{{ whatsapp_link }}" target="_blank" rel="noopener"
+       style="color:var(--wine);font-weight:600">send us your feedback there</a>.
+</p>
+
+<style>
+    .star-input { display: flex; gap: 6px; margin: 4px 0; }
+    .star-btn {
+        background: none;
+        border: none;
+        font-size: 2rem;
+        line-height: 1;
+        cursor: pointer;
+        color: var(--line);
+        transition: color 0.15s ease, transform 0.1s ease;
+        padding: 0;
+    }
+    .star-btn:hover { transform: scale(1.1); }
+    .star-btn.filled { color: var(--gold); }
+</style>
+
+<script>
+    function setRating(value) {
+        document.getElementById('rating-input').value = value;
+        document.querySelectorAll('.star-btn').forEach(btn => {
+            const btnValue = parseInt(btn.getAttribute('data-value'));
+            btn.classList.toggle('filled', btnValue <= value);
+        });
+    }
+
+    document.getElementById('submit-review-btn').addEventListener('click', function (e) {
+        const rating = document.getElementById('rating-input').value;
+        if (rating === '0') {
+            e.preventDefault();
+            alert('Please select a star rating before submitting.');
+        }
+    });
+</script>
+{% endblock %}

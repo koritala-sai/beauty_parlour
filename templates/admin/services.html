@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Manage Services — Admin{% endblock %}
+
+{% block content %}
+<p class="eyebrow">Owner Panel</p>
+<h1>Manage Services</h1>
+<div class="divider left"><span class="mark"></span></div>
+
+<div class="admin-nav">
+    <a href="{{ url_for('admin.dashboard') }}" class="btn-outline">← Dashboard</a>
+    <a href="{{ url_for('admin.manage_staff') }}" class="btn-outline">👤 Staff</a>
+</div>
+
+<h2>Add a New Service</h2>
+<form method="POST" action="{{ url_for('admin.add_service') }}" class="form" style="max-width:520px">
+    <label for="name">Service Name</label>
+    <input type="text" name="name" id="name" required placeholder="e.g. Hair Colour Treatment">
+
+    <label for="category">Category</label>
+    <input type="text" name="category" id="category" placeholder="e.g. Hair, Skin, Spa, Nails">
+
+    <label for="price">Price (₹)</label>
+    <input type="number" step="0.01" min="0" name="price" id="price" required placeholder="e.g. 799">
+
+    <label for="duration_minutes">Duration (minutes)</label>
+    <input type="number" min="5" name="duration_minutes" id="duration_minutes" value="30" required>
+
+    <label for="description">Description <span class="muted">(optional)</span></label>
+    <textarea name="description" id="description" rows="3"
+              placeholder="Brief description of what this service includes…"></textarea>
+
+    <button type="submit" class="btn" id="add-service-btn">Add Service</button>
+</form>
+
+<h2>Existing Services</h2>
+<div style="overflow-x:auto">
+<table class="table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Category</th>
+            <th>Price</th>
+            <th>Duration</th>
+            <th>Description</th>
+            <th>Active</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for s in services %}
+        <tr>
+            <td><strong>{{ s.name }}</strong></td>
+            <td>{{ s.category or '—' }}</td>
+            <td>₹{{ s.price }}</td>
+            <td>{{ s.duration_minutes }} min</td>
+            <td><span class="muted" style="font-size:0.85rem">{{ (s.description or '—')[:60] }}{% if s.description and s.description|length > 60 %}…{% endif %}</span></td>
+            <td>
+                <span class="badge {{ 'badge-confirmed' if s.is_active else 'badge-cancelled' }}">
+                    {{ "Active" if s.is_active else "Inactive" }}
+                </span>
+            </td>
+            <td>
+                <form method="POST" action="{{ url_for('admin.toggle_service', service_id=s.id) }}">
+                    <button type="submit" class="btn-link">
+                        {{ "Deactivate" if s.is_active else "Activate" }}
+                    </button>
+                </form>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" style="text-align:center;padding:32px"><span class="muted">No services yet. Add one above.</span></td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}

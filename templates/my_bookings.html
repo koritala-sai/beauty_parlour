@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}My Bookings — Glow Studio{% endblock %}
+
+{% block content %}
+<p class="eyebrow">Your History</p>
+<h1>My Bookings</h1>
+<div class="divider left"><span class="mark"></span></div>
+
+{% if bookings %}
+<div style="overflow-x:auto">
+<table class="table">
+    <thead>
+        <tr>
+            <th>Service</th>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Stylist</th>
+            <th>Price</th>
+            <th>Status</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for b in bookings %}
+        <tr>
+            <td><strong>{{ b.service.name if b.service else 'Service' }}</strong></td>
+            <td>{{ b.booking_date.strftime('%d %b %Y') if b.booking_date else b.booking_date }}</td>
+            <td>{{ b.booking_time.strftime('%I:%M %p') if b.booking_time else b.booking_time }}</td>
+            <td>{{ b.staff.name if b.staff else '—' }}</td>
+            <td class="price" style="margin:0;font-size:0.95rem">₹{{ b.service.price if b.service else '0.00' }}</td>
+            <td><span class="badge badge-{{ b.status }}">{{ b.status | replace('_', ' ') | title }}</span></td>
+            <td>
+                {% if b.status not in ["cancelled", "completed"] %}
+                <form method="POST" action="{{ url_for('booking.cancel_booking', booking_id=b.id) }}"
+                      onsubmit="return confirm('Are you sure you want to cancel this booking?')">
+                    <button type="submit" class="btn-link" style="color:#8a2f37">Cancel</button>
+                </form>
+                {% elif b.status == "completed" %}
+                    {% if b.review %}
+                        <span class="muted" style="font-size:0.85rem">{{ "★" * b.review.rating }}{{ "☆" * (5 - b.review.rating) }}</span>
+                        <br>
+                        <a href="{{ whatsapp_links[b.id] }}" target="_blank" rel="noopener" class="btn-link">Share on WhatsApp</a>
+                    {% else %}
+                        <a href="{{ url_for('booking.leave_review', booking_id=b.id) }}" class="btn-link">Leave a Review</a>
+                    {% endif %}
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% else %}
+<div class="empty-state">
+    <span class="empty-icon">📅</span>
+    <h3>No Bookings Yet</h3>
+    <p>You haven't booked any appointments. Explore our services and treat yourself to a fabulous experience!</p>
+    <a href="{{ url_for('main.services') }}" class="btn">Browse Services</a>
+</div>
+{% endif %}
+{% endblock %}

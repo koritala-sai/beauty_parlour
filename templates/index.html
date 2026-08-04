@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Glow Studio — Book Your Appointment{% endblock %}
+{% block meta_description %}Glow Studio offers expert hair styling, skincare facials, nail art, and bridal beauty
+services in Guntur, AP. Book online in seconds.{% endblock %}
+
+{% block content %}
+<section class="hero">
+    {% if current_user.is_authenticated %}
+    <p class="eyebrow">Welcome back, {{ current_user.name }}! ✨</p>
+    {% else %}
+    <p class="eyebrow">Hair · Skin · Spa · Bridal</p>
+    {% endif %}
+    <h1>Discover <span class="gold-text">Beauty,</span> Redefined<br>at Glow Studio</h1>
+    <p>Indulge in expert styling, premium care, and an atmosphere that feels
+        like home — where your beauty meets brilliance.</p>
+    <p class="hero-tagline">✨ Let's create your perfect look — elegance, confidence, and care.</p>
+    <a href="{{ url_for('main.services') }}" class="btn-pill btn-pill-lg">Book Now</a>
+</section>
+
+<!-- Stats Row -->
+<div class="stats-row" aria-label="Studio highlights">
+    <div class="stat-item">
+        <div class="stat-number">500+</div>
+        <div class="stat-label">Happy Clients</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-number">8+</div>
+        <div class="stat-label">Expert Stylists</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-number">30+</div>
+        <div class="stat-label">Services</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-number">5★</div>
+        <div class="stat-label">Avg. Rating</div>
+    </div>
+</div>
+
+<!-- Signature Services -->
+<p class="eyebrow" style="text-align:center">What We Offer</p>
+<h2 style="text-align:center">Our Signature Services</h2>
+<p class="section-sub">Carefully curated treatments by expert professionals, crafted to leave you feeling confident and
+    radiant.</p>
+
+<div class="grid" style="justify-content:center">
+    <div class="card" data-initial="H">
+        <h3>Hair Styling</h3>
+        <p class="muted">Precision cuts, creative styling &amp; professional coloring tailored to you.</p>
+        <a href="{{ url_for('main.services') }}" class="btn-link">View services →</a>
+    </div>
+    <div class="card" data-initial="B">
+        <h3>Beauty Care</h3>
+        <p class="muted">Facials, makeup &amp; advanced skincare treatments for radiant skin.</p>
+        <a href="{{ url_for('main.services') }}" class="btn-link">View services →</a>
+    </div>
+    <div class="card" data-initial="N">
+        <h3>Nail &amp; Hand Care</h3>
+        <p class="muted">Manicure, pedicure and creative nail art with premium finishes.</p>
+        <a href="{{ url_for('main.services') }}" class="btn-link">View services →</a>
+    </div>
+</div>
+
+<div class="divider"><span class="mark"></span></div>
+
+<!-- About -->
+<section class="about-section">
+    <p class="eyebrow">About Glow Studio</p>
+    <h2>Where style meets comfort.</h2>
+    <p class="section-sub" style="margin:0 0 32px">
+        Founded with the dream of creating a salon that feels like home, Glow Studio brings
+        together expert stylists, premium products, and a thoughtful service experience —
+        crafted to reflect your individuality while ensuring a calm, relaxing visit.
+    </p>
+    <div class="highlight-grid">
+        <div class="highlight">
+            <h4>Quality</h4>
+            <p class="muted">Premium products &amp; expert stylists.</p>
+        </div>
+        <div class="highlight">
+            <h4>Care</h4>
+            <p class="muted">Personalized service — you come first.</p>
+        </div>
+        <div class="highlight">
+            <h4>Punctuality</h4>
+            <p class="muted">We respect your time and deliver on schedule.</p>
+        </div>
+    </div>
+</section>
+
+<div class="divider"><span class="mark"></span></div>
+
+<!-- Testimonials -->
+<p class="eyebrow" style="text-align:center">Client Love</p>
+<h2 style="text-align:center">Hear From Our Happy Clients</h2>
+
+<div class="grid" style="justify-content:center">
+    {% for r in reviews %}
+    <div class="testimonial">
+        <span class="stars">{{ "★" * r.rating }}{{ "☆" * (5 - r.rating) }}</span>
+        <p>"{{ r.comment or ("Loved my " + r.service.name + " at Glow Studio!") }}"</p>
+        <p class="testimonial-name">— {{ r.user.name }}, {{ r.service.name }}</p>
+    </div>
+    {% endfor %}
+
+    {% if reviews|length < 3 %}
+    {# Fill remaining slots with sample testimonials until enough real reviews come in #}
+    {% set sample_testimonials = [
+        ("Glow Studio feels like a second home. The team remembers my preferences and always makes me feel special.", "Priya S., Regular Client"),
+        ("I appreciate how they always respect my time. Booking online made it even easier to plan around my schedule.", "Rahul M., Client"),
+        ("Warm staff, relaxing atmosphere, and consistently great results. Our go-to place for every occasion.", "Anita D., Client"),
+    ] %}
+    {% for text, name in sample_testimonials[:3 - reviews|length] %}
+    <div class="testimonial">
+        <span class="stars">★★★★★</span>
+        <p>"{{ text }}"</p>
+        <p class="testimonial-name">— {{ name }}</p>
+    </div>
+    {% endfor %}
+    {% endif %}
+</div>
+
+<!-- CTA Banner -->
+<div class="cta-banner">
+    <p class="eyebrow" style="color:var(--gold-light)">Ready for a transformation?</p>
+    <h2>Book Your Appointment Today</h2>
+    <p>Join hundreds of happy clients who trust Glow Studio for their style needs. Seamless online booking — done in 60
+        seconds.</p>
+    <a href="{{ url_for('main.services') }}" class="btn-pill btn-pill-lg">Browse Services &amp; Book</a>
+</div>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Our Services — Glow Studio{% endblock %}
+{% block meta_description %}Explore all Glow Studio services: hair styling, facials, nail art, bridal packages and more. Book online instantly.{% endblock %}
+
+{% block content %}
+<p class="eyebrow">Our Menu</p>
+<h1>Our Services</h1>
+<div class="divider left"><span class="mark"></span></div>
+
+{% if services %}
+<!-- Category filter bar -->
+{% set categories = services | map(attribute='category') | select | unique | list %}
+<div class="filter-bar" id="filter-bar" role="group" aria-label="Filter by category">
+    <button class="filter-btn active" data-cat="all" onclick="filterServices('all', this)">All</button>
+    {% for cat in categories %}
+    {% if cat %}
+    <button class="filter-btn" data-cat="{{ cat }}" onclick="filterServices('{{ cat }}', this)">{{ cat }}</button>
+    {% endif %}
+    {% endfor %}
+    <span class="service-count" id="service-count">{{ services|length }} services</span>
+</div>
+{% endif %}
+
+<div class="grid" id="services-grid">
+    {% for service in services %}
+    <div class="card" data-initial="{{ service.name[0]|upper }}" data-category="{{ service.category or '' }}">
+        <h3>{{ service.name }}</h3>
+        <p class="muted">{{ service.category }}</p>
+        {% if ratings.get(service.id) %}
+        <p class="muted" style="color:var(--gold);font-size:0.85rem;margin:2px 0 8px">
+            {{ "★" * (ratings[service.id].avg | round | int) }}{{ "☆" * (5 - (ratings[service.id].avg | round | int)) }}
+            {{ ratings[service.id].avg }} ({{ ratings[service.id].count }} review{{ 's' if ratings[service.id].count != 1 }})
+        </p>
+        {% endif %}
+        <p>{{ service.description or "" }}</p>
+        <p class="price">₹{{ service.price }} · {{ service.duration_minutes }} min</p>
+        <a href="{{ url_for('booking.book_service', service_id=service.id) }}" class="btn">Book Now</a>
+    </div>
+    {% else %}
+    <div class="empty-state" style="grid-column:1/-1">
+        <span class="empty-icon">✂️</span>
+        <h3>No Services Yet</h3>
+        <p>We're adding services soon. Check back shortly or contact us for more information.</p>
+        <a href="mailto:hello@glowstudio.com" class="btn">Contact Us</a>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+function filterServices(cat, btn) {
+    // Update active button
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    const cards = document.querySelectorAll('#services-grid .card');
+    let visible = 0;
+    cards.forEach(card => {
+        const cardCat = card.getAttribute('data-category') || '';
+        const show = cat === 'all' || cardCat === cat;
+        card.style.display = show ? '' : 'none';
+        if (show) visible++;
+    });
+
+    const countEl = document.getElementById('service-count');
+    if (countEl) countEl.textContent = visible + ' service' + (visible !== 1 ? 's' : '');
+}
+</script>
+{% endblock %}

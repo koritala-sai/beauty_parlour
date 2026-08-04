@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}Book {{ service.name }} — Glow Studio{% endblock %}
+
+{% block content %}
+<p class="eyebrow">New Appointment</p>
+<h1>Book Your Visit</h1>
+<div class="divider left"><span class="mark"></span></div>
+
+<div class="booking-layout">
+    <!-- Booking form -->
+    <div>
+        <form method="POST" class="form" style="max-width:100%">
+            {% if staff_members %}
+            <label for="staff_id">Preferred Stylist <span class="muted">(optional)</span></label>
+            <select name="staff_id" id="staff_id">
+                <option value="">No preference</option>
+                {% for staff in staff_members %}
+                <option value="{{ staff.id }}">{{ staff.name }}{% if staff.specialties %} — {{ staff.specialties }}{% endif %}</option>
+                {% endfor %}
+            </select>
+            <p class="muted" style="font-size:0.8rem;margin:4px 0 0">
+                Pick a stylist to see their real-time available slots below.
+            </p>
+            {% endif %}
+
+            <label for="booking_date">Date</label>
+            <input type="date" name="booking_date" id="booking_date" required
+                   min="{{ today }}" autocomplete="off">
+
+            <label for="booking_time">Time Slot</label>
+            <!-- Quick time-slot chips -->
+            <div class="time-chips" aria-label="Quick time suggestions">
+                <button type="button" class="time-chip" data-time="09:00" onclick="setTime('09:00', this)">9:00 AM</button>
+                <button type="button" class="time-chip" data-time="10:30" onclick="setTime('10:30', this)">10:30 AM</button>
+                <button type="button" class="time-chip" data-time="12:00" onclick="setTime('12:00', this)">12:00 PM</button>
+                <button type="button" class="time-chip" data-time="14:00" onclick="setTime('14:00', this)">2:00 PM</button>
+                <button type="button" class="time-chip" data-time="16:00" onclick="setTime('16:00', this)">4:00 PM</button>
+                <button type="button" class="time-chip" data-time="18:00" onclick="setTime('18:00', this)">6:00 PM</button>
+            </div>
+            <input type="time" name="booking_time" id="booking_time" required autocomplete="off">
+
+            <label for="notes">Special Requests <span class="muted">(optional)</span></label>
+            <textarea name="notes" id="notes" placeholder="Any preferences, allergies, or special instructions for your stylist…" rows="3"></textarea>
+
+            <button type="submit" class="btn" id="confirm-booking-btn">Confirm Booking</button>
+        </form>
+    </div>
+
+    <!-- Sidebar summary -->
+    <aside class="booking-sidebar" aria-label="Booking summary">
+        <p class="eyebrow" style="margin:0 0 14px">Booking Summary</p>
+        <div class="sidebar-label">Service</div>
+        <div class="sidebar-value">{{ service.name }}</div>
+        {% if service.category %}
+        <div class="sidebar-label">Category</div>
+        <div class="sidebar-value">{{ service.category }}</div>
+        {% endif %}
+        <div class="sidebar-label">Duration</div>
+        <div class="sidebar-value">{{ service.duration_minutes }} minutes</div>
+        <hr>
+        <div class="sidebar-label">Price</div>
+        <div class="sidebar-price">₹{{ service.price }}</div>
+        {% if service.description %}
+        <hr>
+        <p class="muted" style="font-size:0.85rem;line-height:1.6;margin:0">{{ service.description }}</p>
+        {% endif %}
+        <hr>
+        <p class="muted" style="font-size:0.8rem;margin:0;line-height:1.6">
+            📍 123 MG Road, Guntur, AP<br>
+            📞 +91 9059302359
+        </p>
+    </aside>
+</div>
+
+<script>
+    const dateInput = document.getElementById('booking_date');
+    const timeInput = document.getElementById('booking_time');
+    const staffSelect = document.getElementById('staff_id');
+
+    if (dateInput && !dateInput.value) {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        dateInput.min = `${yyyy}-${mm}-${dd}`;
+    }
+
+    function checkBookedSlots() {
+        if (!dateInput || !dateInput.value) return;
+
+        const staffId = staffSelect ? staffSelect.value : '';
+
+        // No stylist chosen yet — nothing to check against, so show every
+        // slot as available (no conflict is possible with "No preference").
+        if (!staffId) {
+            document.querySelectorAll('.time-chip').forEach(chip => {
+                chip.style.display = '';
+                chip.disabled = false;
+                chip.classList.remove('booked');
+                chip.title = '';
+            });
+            return;
+        }
+
+        fetch(`/api/booked-slots?date=${dateInput.value}&staff_id=${staffId}`)
+            .then(res => res.json())
+            .then(data => {
+                const bookedSlots = data.booked_slots || [];
+                document.querySelectorAll('.time-chip').forEach(chip => {
+                    const slotTime = chip.getAttribute('data-time');
+                    if (bookedSlots.includes(slotTime)) {
+                        // Hidden entirely, not just disabled — an already
+                        // booked slot for this stylist shouldn't be
+                        // selectable or even visible to other customers.
+                        chip.style.display = 'none';
+                        chip.disabled = true;
+                        chip.classList.remove('selected');
+                        if (timeInput && timeInput.value === slotTime) {
+                            timeInput.value = '';
+                        }
+                    } else {
+                        chip.style.display = '';
+                        chip.disabled = false;
+                        chip.classList.remove('booked');
+                        chip.title = '';
+                    }
+                });
+            })
+            .catch(err => console.warn('Error fetching booked slots:', err));
+    }
+
+    if (dateInput) {
+        dateInput.addEventListener('change', checkBookedSlots);
+    }
+    if (staffSelect) {
+        staffSelect.addEventListener('change', checkBookedSlots);
+    }
+    if (dateInput && dateInput.value) {
+        checkBookedSlots();
+    }
+
+    function setTime(val, btnEl) {
+        if (btnEl && btnEl.disabled) return;
+        if (timeInput) {
+            timeInput.value = val;
+            document.querySelectorAll('.time-chip').forEach(c => c.classList.remove('selected'));
+            if (btnEl) {
+                btnEl.classList.add('selected');
+            }
+        }
+    }
+
+    if (timeInput) {
+        timeInput.addEventListener('change', () => {
+            document.querySelectorAll('.time-chip').forEach(c => {
+                c.classList.toggle('selected', c.getAttribute('data-time') === timeInput.value);
+            });
+        });
+    }
+</script>
+{% endblock %}

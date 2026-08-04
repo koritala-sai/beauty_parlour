@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Manage Staff{% endblock %}
+
+{% block content %}
+<p class="eyebrow">Owner Panel</p>
+<h1>Manage Staff</h1>
+<div class="divider left"><span class="mark"></span></div>
+
+<div class="admin-nav">
+    <a href="{{ url_for('admin.dashboard') }}" class="btn-outline">← Dashboard</a>
+    <a href="{{ url_for('admin.manage_services') }}" class="btn-outline">✂️ Services</a>
+</div>
+
+<h2>Add a Staff Member</h2>
+<form method="POST" action="{{ url_for('admin.add_staff') }}" class="form">
+    <label for="name">Name</label>
+    <input type="text" name="name" id="name" required>
+
+    <label for="specialties">Specialties</label>
+    <input type="text" name="specialties" id="specialties" placeholder="e.g. Hair color, Bridal makeup">
+
+    <button type="submit" class="btn">Add Staff</button>
+</form>
+
+<h2>Current Staff</h2>
+<table class="table">
+    <thead>
+        <tr><th>Name</th><th>Specialties</th><th>Status</th><th></th></tr>
+    </thead>
+    <tbody>
+        {% for s in staff_members %}
+        <tr>
+            <td>{{ s.name }}</td>
+            <td>{{ s.specialties or "—" }}</td>
+            <td>
+                <span class="badge {{ 'badge-confirmed' if s.is_active else 'badge-cancelled' }}">
+                    {{ "Active" if s.is_active else "Inactive" }}
+                </span>
+            </td>
+            <td>
+                <form method="POST" action="{{ url_for('admin.toggle_staff', staff_id=s.id) }}">
+                    <button type="submit" class="btn-link">
+                        {{ "Deactivate" if s.is_active else "Activate" }}
+                    </button>
+                </form>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4">No staff added yet.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

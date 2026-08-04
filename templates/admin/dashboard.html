@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard — Glow Studio{% endblock %}
+
+{% block content %}
+<p class="eyebrow">Owner Panel</p>
+<h1>Admin Dashboard</h1>
+<div class="divider left"><span class="mark"></span></div>
+
+<!-- Quick nav -->
+<div class="admin-nav">
+    <a href="{{ url_for('admin.manage_services') }}" class="btn-outline">✂️ &nbsp;Manage Services</a>
+    <a href="{{ url_for('admin.manage_staff') }}" class="btn-outline">👤 &nbsp;Manage Staff</a>
+</div>
+
+<!-- Stats cards -->
+<div class="admin-stats">
+    <div class="admin-stat-card stat-today">
+        <div class="stat-n">{{ stats.today }}</div>
+        <div class="stat-l">Today's Bookings</div>
+    </div>
+    <div class="admin-stat-card">
+        <div class="stat-n">{{ stats.total }}</div>
+        <div class="stat-l">Total Bookings</div>
+    </div>
+    <div class="admin-stat-card stat-pending">
+        <div class="stat-n">{{ stats.pending }}</div>
+        <div class="stat-l">Pending</div>
+    </div>
+    <div class="admin-stat-card stat-confirmed">
+        <div class="stat-n">{{ stats.confirmed }}</div>
+        <div class="stat-l">Confirmed</div>
+    </div>
+    <div class="admin-stat-card stat-completed">
+        <div class="stat-n">{{ stats.completed }}</div>
+        <div class="stat-l">Completed</div>
+    </div>
+    <div class="admin-stat-card">
+        <div class="stat-n">{{ stats.cancelled }}</div>
+        <div class="stat-l">Cancelled</div>
+    </div>
+</div>
+
+<h2>Active Bookings <span class="muted" style="font-size:1rem;font-weight:400">(Pending, Confirmed & Completed)</span></h2>
+
+<div style="overflow-x:auto">
+<table class="table">
+    <thead>
+        <tr>
+            <th>Customer</th>
+            <th>Service</th>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Status</th>
+            <th>Notes</th>
+            <th>Update</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for b in bookings %}
+        <tr>
+            <td>
+                <strong>{{ b.customer.name if b.customer else 'Guest' }}</strong>
+                {% if b.customer and b.customer.phone %}<br><span class="muted">{{ b.customer.phone }}</span>{% endif %}
+            </td>
+            <td>{{ b.service.name if b.service else 'Deleted Service' }}</td>
+            <td>{{ b.booking_date.strftime('%d %b %Y') if b.booking_date else b.booking_date }}</td>
+            <td>{{ b.booking_time.strftime('%I:%M %p') if b.booking_time else b.booking_time }}</td>
+            <td><span class="badge badge-{{ b.status }}">{{ b.status | replace('_', ' ') | title }}</span></td>
+            <td><span class="muted" style="font-size:0.83rem">{{ b.notes or '—' }}</span></td>
+            <td>
+                <form method="POST" action="{{ url_for('admin.update_booking_status', booking_id=b.id) }}" class="inline-form">
+                    <select name="status">
+                        {% for s in ["pending", "confirmed", "completed", "cancelled", "no_show"] %}
+                        <option value="{{ s }}" {% if b.status == s %}selected{% endif %}>{{ s | replace('_', ' ') | title }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn" style="padding:7px 14px;font-size:0.78rem">Save</button>
+                </form>
+            </td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="7" style="text-align:center;padding:48px">
+                <span class="muted">No active bookings yet.</span>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<h2 style="margin-top:48px">Cancelled Bookings</h2>
+
+<div style="overflow-x:auto">
+<table class="table">
+    <thead>
+        <tr>
+            <th>Customer</th>
+            <th>Service</th>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Status</th>
+            <th>Notes</th>
+            <th>Update</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for b in cancelled_bookings %}
+        <tr>
+            <td>
+                <strong>{{ b.customer.name if b.customer else 'Guest' }}</strong>
+                {% if b.customer and b.customer.phone %}<br><span class="muted">{{ b.customer.phone }}</span>{% endif %}
+            </td>
+            <td>{{ b.service.name if b.service else 'Deleted Service' }}</td>
+            <td>{{ b.booking_date.strftime('%d %b %Y') if b.booking_date else b.booking_date }}</td>
+            <td>{{ b.booking_time.strftime('%I:%M %p') if b.booking_time else b.booking_time }}</td>
+            <td><span class="badge badge-cancelled">Cancelled</span></td>
+            <td><span class="muted" style="font-size:0.83rem">{{ b.notes or '—' }}</span></td>
+            <td>
+                <form method="POST" action="{{ url_for('admin.update_booking_status', booking_id=b.id) }}" class="inline-form">
+                    <select name="status">
+                        {% for s in ["pending", "confirmed", "completed", "cancelled", "no_show"] %}
+                        <option value="{{ s }}" {% if b.status == s %}selected{% endif %}>{{ s | replace('_', ' ') | title }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn" style="padding:7px 14px;font-size:0.78rem">Save</button>
+                </form>
+            </td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="7" style="text-align:center;padding:32px">
+                <span class="muted">No cancelled bookings.</span>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}
