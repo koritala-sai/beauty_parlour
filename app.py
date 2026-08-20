@@ -1,7 +1,7 @@
 from flask import Flask
 
 from config import Config
-from extensions import db, login_manager, mail
+from extensions import db, login_manager, mail, csrf, limiter
 from models import User
 
 
@@ -12,6 +12,8 @@ def create_app():
     db.init_app(app)
     login_manager.init_app(app)
     mail.init_app(app)
+    csrf.init_app(app)
+    limiter.init_app(app)
 
     @login_manager.user_loader
     def load_user(user_id):

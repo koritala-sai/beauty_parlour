@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Manage Staff{% endblock %}
+{% block title %}Manage Staff — Admin{% endblock %}
 
 {% block content %}
 <p class="eyebrow">Owner Panel</p>
@@ -9,28 +9,38 @@
 <div class="admin-nav">
     <a href="{{ url_for('admin.dashboard') }}" class="btn-outline">← Dashboard</a>
     <a href="{{ url_for('admin.manage_services') }}" class="btn-outline">✂️ Services</a>
+    <a href="{{ url_for('admin.manage_promos') }}" class="btn-outline">🏷️ Promos</a>
+    <a href="{{ url_for('admin.manage_reviews') }}" class="btn-outline">⭐ Moderation</a>
 </div>
 
-<h2>Add a Staff Member</h2>
-<form method="POST" action="{{ url_for('admin.add_staff') }}" class="form">
+<h2>Add Staff Member</h2>
+<form method="POST" action="{{ url_for('admin.add_staff') }}" class="form" style="max-width:520px">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
     <label for="name">Name</label>
-    <input type="text" name="name" id="name" required>
+    <input type="text" name="name" id="name" required placeholder="e.g. Priya Sharma">
 
-    <label for="specialties">Specialties</label>
-    <input type="text" name="specialties" id="specialties" placeholder="e.g. Hair color, Bridal makeup">
+    <label for="specialties">Specialties <span class="muted">(optional)</span></label>
+    <input type="text" name="specialties" id="specialties" placeholder="e.g. Hair Color, Bridal Makeup">
 
-    <button type="submit" class="btn">Add Staff</button>
+    <button type="submit" class="btn" id="add-staff-btn">Add Staff</button>
 </form>
 
-<h2>Current Staff</h2>
+<h2 style="margin-top:40px;">Current Staff</h2>
+<div style="overflow-x:auto;">
 <table class="table">
     <thead>
-        <tr><th>Name</th><th>Specialties</th><th>Status</th><th></th></tr>
+        <tr>
+            <th>Name</th>
+            <th>Specialties</th>
+            <th>Status</th>
+            <th style="text-align:center;">Actions</th>
+        </tr>
     </thead>
     <tbody>
         {% for s in staff_members %}
         <tr>
-            <td>{{ s.name }}</td>
+            <td><strong>{{ s.name }}</strong></td>
             <td>{{ s.specialties or "—" }}</td>
             <td>
                 <span class="badge {{ 'badge-confirmed' if s.is_active else 'badge-cancelled' }}">
@@ -38,16 +48,39 @@
                 </span>
             </td>
             <td>
-                <form method="POST" action="{{ url_for('admin.toggle_staff', staff_id=s.id) }}">
-                    <button type="submit" class="btn-link">
-                        {{ "Deactivate" if s.is_active else "Activate" }}
-                    </button>
-                </form>
+                <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+                    <!-- Edit -->
+                    <a href="{{ url_for('admin.edit_staff', staff_id=s.id) }}" class="btn-outline" style="padding:6px 12px;font-size:0.8rem;text-decoration:none">
+                        ✏ Edit
+                    </a>
+
+                    <!-- Activate / Deactivate -->
+                    <form method="POST" action="{{ url_for('admin.toggle_staff', staff_id=s.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn" style="padding:6px 12px;font-size:0.8rem">
+                            {{ "Deactivate" if s.is_active else "Activate" }}
+                        </button>
+                    </form>
+
+                    <!-- Delete -->
+                    <form method="POST" action="{{ url_for('admin.delete_staff', staff_id=s.id) }}"
+                          onsubmit="return confirm('Are you sure you want to delete this staff member?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn-danger" style="padding:6px 12px;font-size:0.8rem">
+                            Delete
+                        </button>
+                    </form>
+                </div>
             </td>
         </tr>
         {% else %}
-        <tr><td colspan="4">No staff added yet.</td></tr>
+        <tr>
+            <td colspan="4" style="text-align:center;padding:30px;">
+                <span class="muted">No staff members added yet.</span>
+            </td>
+        </tr>
         {% endfor %}
     </tbody>
 </table>
+</div>
 {% endblock %}

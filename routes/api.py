@@ -2,11 +2,12 @@ from datetime import datetime
 
 from flask import Blueprint, jsonify, request
 
-from extensions import db
+from extensions import db, csrf
 from models import Service, Booking, User
 from notifications import send_booking_confirmation_email
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
+csrf.exempt(api_bp)  # API uses JSON, not HTML forms — no CSRF tokens
 
 # NOTE: These endpoints are unauthenticated on purpose, to make them easy to
 # test in Postman while you're learning. Before deploying this for real

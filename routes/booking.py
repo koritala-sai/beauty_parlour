@@ -4,8 +4,8 @@ from urllib.parse import quote
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 
-from extensions import db
-from models import Service, Staff, Booking, Review, auto_complete_past_bookings
+from extensions import db, limiter, csrf
+from models import Service, Staff, Booking, Review, PromoCode, auto_complete_past_bookings
 from notifications import send_booking_confirmation_email
 
 # The salon's WhatsApp number for the "share your feedback" link.
@@ -38,6 +38,7 @@ def build_whatsapp_review_link(booking, review=None):
 
 @booking_bp.route("/book/<int:service_id>", methods=["GET", "POST"])
 @login_required
+@limiter.limit("10 per minute")
 def book_service(service_id):
     if current_user.is_admin:
         flash("Admins cannot book appointments as customers. Use the Admin Dashboard to manage bookings.", "error")
@@ -48,12 +49,19 @@ def book_service(service_id):
     service = Service.query.get_or_404(service_id)
     staff_members = Staff.query.filter_by(is_active=True).all()
 
+    all_promos = PromoCode.query.filter_by(is_active=True).all()
+    active_promos = [p for p in all_promos if p.is_valid(order_total=float(service.price))[0]]
+
     if request.method == "POST":
         date_str = request.form.get("booking_date")
         time_str = request.form.get("booking_time")
         staff_id_raw = request.form.get("staff_id")
         staff_id = int(staff_id_raw) if staff_id_raw and staff_id_raw.isdigit() else None
-        notes = request.form.get("notes", "").strip() or None
+        notes = (request.form.get("notes", "").strip() or None)
+        if notes:
+            notes = notes[:500]  # cap notes length
+
+        promo_code_str = request.form.get("promo_code", "").strip().upper()
 
         try:
             booking_date = datetime.strptime(date_str, "%Y-%m-%d").date()
@@ -61,13 +69,13 @@ def book_service(service_id):
         except (ValueError, TypeError):
             flash("Please choose a valid date and time.", "error")
             return render_template("booking.html", service=service, staff_members=staff_members,
-                                   today=date.today().strftime("%Y-%m-%d"))
+                                   active_promos=active_promos, today=date.today().strftime("%Y-%m-%d"))
 
         # Server-side past-date validation
         if booking_date < date.today():
             flash("You cannot book an appointment in the past. Please choose today or a future date.", "error")
             return render_template("booking.html", service=service, staff_members=staff_members,
-                                   today=date.today().strftime("%Y-%m-%d"))
+                                   active_promos=active_promos, today=date.today().strftime("%Y-%m-%d"))
 
         # Staff-specific time-conflict check: only blocks this slot if the
         # SAME staff member already has a booking at this exact time.
@@ -79,12 +87,30 @@ def book_service(service_id):
                 booking_date=booking_date,
                 booking_time=booking_time,
                 staff_id=staff_id,
-            ).filter(Booking.status.in_(["pending", "confirmed", "completed"])).first()
+            ).filter(Booking.status.in_(["pending", "completed"])).first()
 
         if conflict:
             flash("This stylist is already booked at that time. Please choose a different time or stylist.", "error")
             return render_template("booking.html", service=service, staff_members=staff_members,
-                                   today=date.today().strftime("%Y-%m-%d"))
+                                   active_promos=active_promos, today=date.today().strftime("%Y-%m-%d"))
+
+        # --- Promo code handling ---
+        promo = None
+        discount_amount = 0
+        if promo_code_str:
+            promo = PromoCode.query.filter_by(code=promo_code_str).first()
+            if not promo:
+                flash("Invalid promo code.", "error")
+                return render_template("booking.html", service=service, staff_members=staff_members,
+                                       active_promos=active_promos, today=date.today().strftime("%Y-%m-%d"))
+
+            valid, msg = promo.is_valid(order_total=float(service.price))
+            if not valid:
+                flash(msg, "error")
+                return render_template("booking.html", service=service, staff_members=staff_members,
+                                       active_promos=active_promos, today=date.today().strftime("%Y-%m-%d"))
+
+            discount_amount = promo.calculate_discount(service.price)
 
         new_booking = Booking(
             user_id=current_user.id,
@@ -95,17 +121,27 @@ def book_service(service_id):
             status="pending",
             payment_status="unpaid",
             notes=notes,
+            promo_code_id=promo.id if promo else None,
+            discount_amount=discount_amount,
         )
         db.session.add(new_booking)
+
+        # Increment promo usage count
+        if promo:
+            promo.used_count = (promo.used_count or 0) + 1
+
         db.session.commit()
 
         send_booking_confirmation_email(new_booking)
 
-        flash("Booking request submitted! We'll confirm it shortly.", "success")
+        if discount_amount > 0:
+            flash(f"Booking submitted with ₹{discount_amount} discount applied! We'll confirm it shortly.", "success")
+        else:
+            flash("Booking request submitted! We'll confirm it shortly.", "success")
         return redirect(url_for("booking.my_bookings"))
 
     return render_template("booking.html", service=service, staff_members=staff_members,
-                           today=date.today().strftime("%Y-%m-%d"))
+                           active_promos=active_promos, today=date.today().strftime("%Y-%m-%d"))
 
 
 @booking_bp.route("/my-bookings")
@@ -166,10 +202,44 @@ def get_booked_slots():
     auto_complete_past_bookings()
 
     bookings = Booking.query.filter_by(booking_date=target_date, staff_id=staff_id) \
-        .filter(Booking.status.in_(["pending", "confirmed", "completed"])).all()
+        .filter(Booking.status.in_(["pending", "completed"])).all()
 
     booked_slots = [b.booking_time.strftime("%H:%M") for b in bookings if b.booking_time]
     return jsonify({"booked_slots": booked_slots})
+
+
+@booking_bp.route("/api/validate-promo")
+@login_required
+def validate_promo():
+    """AJAX endpoint: checks a promo code and returns the discount amount."""
+    code = request.args.get("code", "").strip().upper()
+    service_id = request.args.get("service_id", type=int)
+
+    if not code or not service_id:
+        return jsonify({"valid": False, "message": "Missing code or service."})
+
+    promo = PromoCode.query.filter_by(code=code).first()
+    if not promo:
+        return jsonify({"valid": False, "message": "Invalid promo code."})
+
+    service = Service.query.get(service_id)
+    if not service:
+        return jsonify({"valid": False, "message": "Service not found."})
+
+    valid, msg = promo.is_valid(order_total=float(service.price))
+    if not valid:
+        return jsonify({"valid": False, "message": msg})
+
+    discount = promo.calculate_discount(service.price)
+    final_price = round(float(service.price) - discount, 2)
+
+    return jsonify({
+        "valid": True,
+        "message": f"₹{discount} off applied!",
+        "discount": discount,
+        "final_price": final_price,
+        "code": promo.code,
+    })
 
 
 @booking_bp.route("/booking/<int:booking_id>/review", methods=["GET", "POST"])
@@ -194,7 +264,9 @@ def leave_review(booking_id):
             rating = int(request.form.get("rating", 0))
         except ValueError:
             rating = 0
-        comment = request.form.get("comment", "").strip() or None
+        comment = (request.form.get("comment", "").strip() or None)
+        if comment:
+            comment = comment[:1000]  # cap comment length
 
         if rating < 1 or rating > 5:
             flash("Please choose a rating between 1 and 5 stars.", "error")

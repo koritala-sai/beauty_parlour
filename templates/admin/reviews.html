@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Manage Reviews — Admin{% endblock %}
+
+{% block content %}
+<p class="eyebrow">Owner Panel</p>
+<h1>Admin Review Moderation</h1>
+<div class="divider left"><span class="mark"></span></div>
+
+<div class="admin-nav">
+    <a href="{{ url_for('admin.dashboard') }}" class="btn-outline">← Dashboard</a>
+    <a href="{{ url_for('admin.manage_services') }}" class="btn-outline">✂️ Services</a>
+    <a href="{{ url_for('admin.manage_staff') }}" class="btn-outline">👤 Staff</a>
+    <a href="{{ url_for('admin.manage_promos') }}" class="btn-outline">🏷️ Promos</a>
+</div>
+
+<h2>Customer Reviews</h2>
+
+<div style="overflow-x:auto">
+<table class="table">
+    <thead>
+        <tr>
+            <th>Customer</th>
+            <th>Service</th>
+            <th>Rating</th>
+            <th>Comment</th>
+            <th>Date</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in reviews %}
+        <tr {% if r.is_hidden %}style="opacity:0.6;background:#f9f5f2"{% endif %}>
+            <td>
+                <strong>{{ r.user.name if r.user else 'Deleted User' }}</strong>
+            </td>
+            <td>{{ r.service.name if r.service else 'Deleted Service' }}</td>
+            <td><span style="color:var(--gold)">{{ "★" * r.rating }}{{ "☆" * (5 - r.rating) }}</span> ({{ r.rating }}/5)</td>
+            <td><span class="muted" style="font-size:0.9rem">{{ r.comment or '—' }}</span></td>
+            <td>{{ r.created_at.strftime('%d %b %Y') if r.created_at else '—' }}</td>
+            <td>
+                {% if r.is_hidden %}
+                <span class="badge badge-cancelled">Hidden</span>
+                {% else %}
+                <span class="badge badge-confirmed">Visible</span>
+                {% endif %}
+            </td>
+            <td>
+                <div style="display:flex;gap:8px;align-items:center;justify-content:center">
+                    <form method="POST" action="{{ url_for('admin.toggle_review_visibility', review_id=r.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn-outline" style="padding:5px 12px;font-size:0.78rem">
+                            {{ "Unhide" if r.is_hidden else "Hide" }}
+                        </button>
+                    </form>
+                    <form method="POST" action="{{ url_for('admin.delete_review', review_id=r.id) }}"
+                          onsubmit="return confirm('Permanently delete this review?')">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn-danger" style="padding:5px 12px;font-size:0.78rem">
+                            Delete
+                        </button>
+                    </form>
+                </div>
+            </td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="7" style="text-align:center;padding:48px">
+                <span class="muted">No customer reviews submit yet.</span>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}

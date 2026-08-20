@@ -20,7 +20,8 @@ class Config:
 
     # PyMySQL is used as the MySQL driver (pure Python, easy to install, no
     # extra system dependencies compared to mysqlclient)
-    SQLALCHEMY_DATABASE_URI = (
+    SQLALCHEMY_DATABASE_URI = os.environ.get(
+        "DATABASE_URL",
         f"mysql+pymysql://{DB_USER}:{_DB_PASSWORD_ENCODED}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -38,3 +39,12 @@ class Config:
     # Format: country code + number, NO +, spaces, or dashes.
     # Example: 919000000000 for +91 90000 00000
     STUDIO_WHATSAPP_NUMBER = os.environ.get("STUDIO_WHATSAPP_NUMBER", "9059302359")
+
+
+class ProductionConfig(Config):
+    DEBUG = False
+    TESTING = False
+    SESSION_COOKIE_SECURE = True
+    REMEMBER_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    REMEMBER_COOKIE_HTTPONLY = True

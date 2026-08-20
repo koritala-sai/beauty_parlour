@@ -207,7 +207,7 @@ nav a.active {
     margin: 0 auto;
     padding: 48px 24px 80px;
     padding-bottom: 0;
-
+    position: relative;
 }
 
 h1,
@@ -366,7 +366,7 @@ h2 {
 }
 
 .stat-number {
-    font-family: var(--font-display);
+    font-family: var(--font-body);
     font-size: 2.2rem;
     font-weight: 700;
     color: var(--gold-light);
@@ -909,15 +909,27 @@ h2 {
 }
 
 /* ---------- Flash messages ---------- */
+.flash-container {
+    max-width: 1040px;
+    margin: 16px auto 0;
+    padding: 0 24px;
+    position: relative;
+    z-index: 1100;
+}
+
 .flash {
+    position: relative;
+    z-index: 1100;
+    width: 100%;
     display: flex;
     align-items: flex-start;
     gap: 12px;
     padding: 13px 18px;
-    border-radius: var(--radius-sm);
-    margin-bottom: 16px;
+    border-radius: var(--radius-md);
     font-size: 0.92rem;
-    border-left: 3px solid transparent;
+    border-left: 4px solid transparent;
+    box-shadow: 0 4px 16px rgba(36, 22, 25, 0.10);
+    margin-bottom: 12px;
     animation: fadeInDown 0.3s ease;
 }
 
@@ -948,10 +960,23 @@ h2 {
     border-left-color: #2f5943;
 }
 
-.flash-error {
+.flash-error,
+.flash-danger {
     background: #f6e6e7;
     color: #8a2f37;
     border-left-color: #8a2f37;
+}
+
+.flash-warning {
+    background: #fff8e6;
+    color: #8a6d1b;
+    border-left-color: #d4a74c;
+}
+
+.flash-info {
+    background: #eef5fc;
+    color: #1e4d79;
+    border-left-color: #3b82f6;
 }
 
 @keyframes fadeInDown {
@@ -1095,7 +1120,7 @@ h2 {
 }
 
 .admin-stat-card .stat-n {
-    font-family: var(--font-display);
+    font-family: var(--font-body);
     font-size: 2.4rem;
     font-weight: 700;
     color: var(--wine);
@@ -1397,7 +1422,7 @@ h2 {
     }
 
     .navbar nav.open {
-        max-height: 360px;
+        max-height: 420px;
         padding: 12px 0 8px;
     }
 

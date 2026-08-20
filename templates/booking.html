@@ -9,7 +9,9 @@
 <div class="booking-layout">
     <!-- Booking form -->
     <div>
-        <form method="POST" class="form" style="max-width:100%">
+        <form method="POST" class="form" style="max-width:100%" id="booking-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
             {% if staff_members %}
             <label for="staff_id">Preferred Stylist <span class="muted">(optional)</span></label>
             <select name="staff_id" id="staff_id">
@@ -39,6 +41,30 @@
             </div>
             <input type="time" name="booking_time" id="booking_time" required autocomplete="off">
 
+            <!-- Promo Code Input -->
+            <label for="promo_code">Promo / Discount Code <span class="muted">(optional)</span></label>
+            {% if active_promos %}
+            <div style="margin-bottom:8px">
+                <span class="muted" style="font-size:0.78rem;display:block;margin-bottom:4px">AVAILABLE OFFERS (Click to apply):</span>
+                <div style="display:flex;flex-wrap:wrap;gap:6px">
+                    {% for p in active_promos %}
+                    <button type="button" class="promo-chip" onclick="applyPromoChip('{{ p.code }}')"
+                            style="background:#f4ebd9;border:1px dashed var(--gold);color:var(--wine);padding:5px 12px;border-radius:20px;font-size:0.8rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+                        🏷️ <strong>{{ p.code }}</strong>
+                        <span style="font-weight:400;opacity:0.85">
+                            ({% if p.discount_percent and p.discount_percent > 0 %}{{ p.discount_percent }}% OFF{% else %}₹{{ p.discount_flat }} OFF{% endif %})
+                        </span>
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            <div style="display:flex;gap:8px">
+                <input type="text" name="promo_code" id="promo_code" placeholder="e.g. FIRST20" style="text-transform:uppercase;flex:1">
+                <button type="button" class="btn-outline" id="apply-promo-btn" style="padding:8px 16px;font-size:0.8rem">Apply</button>
+            </div>
+            <p id="promo-message" style="font-size:0.83rem;margin:4px 0 0;display:none"></p>
+
             <label for="notes">Special Requests <span class="muted">(optional)</span></label>
             <textarea name="notes" id="notes" placeholder="Any preferences, allergies, or special instructions for your stylist…" rows="3"></textarea>
 
@@ -59,7 +85,15 @@
         <div class="sidebar-value">{{ service.duration_minutes }} minutes</div>
         <hr>
         <div class="sidebar-label">Price</div>
-        <div class="sidebar-price">₹{{ service.price }}</div>
+        <div id="sidebar-price-container">
+            <div class="sidebar-price" id="original-price-display">₹{{ service.price }}</div>
+            <div id="discount-row" style="display:none;margin-top:4px">
+                <span class="muted" style="font-size:0.82rem">Discount: </span>
+                <span style="color:#2f5943;font-weight:600" id="discount-amount-display">-₹0</span><br>
+                <span class="sidebar-label">Total to Pay:</span>
+                <div class="sidebar-price" id="final-price-display" style="color:#2f5943">₹{{ service.price }}</div>
+            </div>
+        </div>
         {% if service.description %}
         <hr>
         <p class="muted" style="font-size:0.85rem;line-height:1.6;margin:0">{{ service.description }}</p>
@@ -76,6 +110,8 @@
     const dateInput = document.getElementById('booking_date');
     const timeInput = document.getElementById('booking_time');
     const staffSelect = document.getElementById('staff_id');
+    const serviceId = {{ service.id }};
+    const basePrice = {{ service.price }};
 
     if (dateInput && !dateInput.value) {
         const today = new Date();
@@ -155,6 +191,63 @@
             document.querySelectorAll('.time-chip').forEach(c => {
                 c.classList.toggle('selected', c.getAttribute('data-time') === timeInput.value);
             });
+        });
+    }
+
+    // --- Promo Code Validation JS ---
+    const applyPromoBtn = document.getElementById('apply-promo-btn');
+    const promoInput = document.getElementById('promo_code');
+    const promoMsg = document.getElementById('promo-message');
+    const discountRow = document.getElementById('discount-row');
+    const originalPriceDisplay = document.getElementById('original-price-display');
+    const discountAmountDisplay = document.getElementById('discount-amount-display');
+    const finalPriceDisplay = document.getElementById('final-price-display');
+
+    function applyPromoChip(code) {
+        if (promoInput) {
+            promoInput.value = code;
+            if (applyPromoBtn) applyPromoBtn.click();
+        }
+    }
+
+    if (applyPromoBtn && promoInput) {
+        applyPromoBtn.addEventListener('click', () => {
+            const code = promoInput.value.trim();
+            if (!code) {
+                promoMsg.style.display = 'block';
+                promoMsg.style.color = '#8a2f37';
+                promoMsg.textContent = 'Please enter a promo code.';
+                return;
+            }
+
+            fetch(`/api/validate-promo?code=${encodeURIComponent(code)}&service_id=${serviceId}`)
+                .then(res => res.json())
+                .then(data => {
+                    promoMsg.style.display = 'block';
+                    if (data.valid) {
+                        promoMsg.style.color = '#2f5943';
+                        promoMsg.textContent = data.message;
+                        originalPriceDisplay.style.textDecoration = 'line-through';
+                        originalPriceDisplay.style.fontSize = '1.1rem';
+                        originalPriceDisplay.style.color = 'var(--muted)';
+                        discountRow.style.display = 'block';
+                        discountAmountDisplay.textContent = `-₹${data.discount}`;
+                        finalPriceDisplay.textContent = `₹${data.final_price}`;
+                    } else {
+                        promoMsg.style.color = '#8a2f37';
+                        promoMsg.textContent = data.message;
+                        originalPriceDisplay.style.textDecoration = 'none';
+                        originalPriceDisplay.style.fontSize = '1.6rem';
+                        originalPriceDisplay.style.color = 'var(--wine)';
+                        discountRow.style.display = 'none';
+                    }
+                })
+                .catch(err => {
+                    console.error('Error validating promo code:', err);
+                    promoMsg.style.display = 'block';
+                    promoMsg.style.color = '#8a2f37';
+                    promoMsg.textContent = 'Failed to validate code.';
+                });
         });
     }
 </script>

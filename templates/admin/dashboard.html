@@ -10,6 +10,8 @@
 <div class="admin-nav">
     <a href="{{ url_for('admin.manage_services') }}" class="btn-outline">✂️ &nbsp;Manage Services</a>
     <a href="{{ url_for('admin.manage_staff') }}" class="btn-outline">👤 &nbsp;Manage Staff</a>
+    <a href="{{ url_for('admin.manage_promos') }}" class="btn-outline">🏷️ &nbsp;Manage Promos</a>
+    <a href="{{ url_for('admin.manage_reviews') }}" class="btn-outline">⭐ &nbsp;Review Moderation</a>
 </div>
 
 <!-- Stats cards -->
@@ -26,10 +28,6 @@
         <div class="stat-n">{{ stats.pending }}</div>
         <div class="stat-l">Pending</div>
     </div>
-    <div class="admin-stat-card stat-confirmed">
-        <div class="stat-n">{{ stats.confirmed }}</div>
-        <div class="stat-l">Confirmed</div>
-    </div>
     <div class="admin-stat-card stat-completed">
         <div class="stat-n">{{ stats.completed }}</div>
         <div class="stat-l">Completed</div>
@@ -40,7 +38,7 @@
     </div>
 </div>
 
-<h2>Active Bookings <span class="muted" style="font-size:1rem;font-weight:400">(Pending, Confirmed & Completed)</span></h2>
+<h2>Active Bookings <span class="muted" style="font-size:1rem;font-weight:400">(Pending &amp; Completed)</span></h2>
 
 <div style="overflow-x:auto">
 <table class="table">
@@ -62,18 +60,25 @@
                 <strong>{{ b.customer.name if b.customer else 'Guest' }}</strong>
                 {% if b.customer and b.customer.phone %}<br><span class="muted">{{ b.customer.phone }}</span>{% endif %}
             </td>
-            <td>{{ b.service.name if b.service else 'Deleted Service' }}</td>
+            <td>
+                {{ b.service.name if b.service else 'Deleted Service' }}
+                {% if b.discount_amount and b.discount_amount > 0 %}
+                <br><span class="badge badge-pending" style="font-size:0.68rem">₹{{ b.discount_amount }} OFF</span>
+                {% endif %}
+            </td>
             <td>{{ b.booking_date.strftime('%d %b %Y') if b.booking_date else b.booking_date }}</td>
             <td>{{ b.booking_time.strftime('%I:%M %p') if b.booking_time else b.booking_time }}</td>
             <td><span class="badge badge-{{ b.status }}">{{ b.status | replace('_', ' ') | title }}</span></td>
             <td><span class="muted" style="font-size:0.83rem">{{ b.notes or '—' }}</span></td>
             <td>
-                <form method="POST" action="{{ url_for('admin.update_booking_status', booking_id=b.id) }}" class="inline-form">
-                    <select name="status">
-                        {% for s in ["pending", "confirmed", "completed", "cancelled", "no_show"] %}
+                <form method="POST" action="{{ url_for('admin.update_booking_status', booking_id=b.id) }}" class="inline-form" onsubmit="return validateCancellationForm(this)">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <select name="status" onchange="handleStatusChange(this)">
+                        {% for s in ["pending", "completed", "cancelled"] %}
                         <option value="{{ s }}" {% if b.status == s %}selected{% endif %}>{{ s | replace('_', ' ') | title }}</option>
                         {% endfor %}
                     </select>
+                    <input type="text" name="cancellation_reason" class="reason-input" placeholder="Cancellation reason..." style="display:none; padding:6px 8px; font-size:0.8rem; width:160px; border:1px solid var(--line); border-radius:2px;">
                     <button type="submit" class="btn" style="padding:7px 14px;font-size:0.78rem">Save</button>
                 </form>
             </td>
@@ -99,9 +104,8 @@
             <th>Service</th>
             <th>Date</th>
             <th>Time</th>
-            <th>Status</th>
-            <th>Notes</th>
-            <th>Update</th>
+            <th>Cancellation Reason</th>
+            <th>Notify / Update</th>
         </tr>
     </thead>
     <tbody>
@@ -114,22 +118,31 @@
             <td>{{ b.service.name if b.service else 'Deleted Service' }}</td>
             <td>{{ b.booking_date.strftime('%d %b %Y') if b.booking_date else b.booking_date }}</td>
             <td>{{ b.booking_time.strftime('%I:%M %p') if b.booking_time else b.booking_time }}</td>
-            <td><span class="badge badge-cancelled">Cancelled</span></td>
-            <td><span class="muted" style="font-size:0.83rem">{{ b.notes or '—' }}</span></td>
+            <td><span class="muted" style="font-size:0.88rem; color:#8a2f37;">{{ b.cancellation_reason or '—' }}</span></td>
             <td>
-                <form method="POST" action="{{ url_for('admin.update_booking_status', booking_id=b.id) }}" class="inline-form">
-                    <select name="status">
-                        {% for s in ["pending", "confirmed", "completed", "cancelled", "no_show"] %}
-                        <option value="{{ s }}" {% if b.status == s %}selected{% endif %}>{{ s | replace('_', ' ') | title }}</option>
-                        {% endfor %}
-                    </select>
-                    <button type="submit" class="btn" style="padding:7px 14px;font-size:0.78rem">Save</button>
-                </form>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    {% set wa_link = b.get_whatsapp_cancellation_link() %}
+                    {% if wa_link %}
+                    <a href="{{ wa_link }}" target="_blank" rel="noopener" class="btn-outline" style="padding:5px 10px; font-size:0.75rem; color:#25D366; border-color:#25D366; text-transform:none;" title="Send WhatsApp Cancellation Message">💬 WhatsApp</a>
+                    {% else %}
+                    <button type="button" class="btn-outline" style="padding:5px 10px; font-size:0.75rem; color:#25D366; border-color:#25D366; text-transform:none; cursor:pointer; background:none;" data-msg="{{ b.get_cancellation_message_text() }}" onclick="sendWhatsAppWithPrompt(this)" title="Send WhatsApp Cancellation Message">💬 WhatsApp</button>
+                    {% endif %}
+                    <form method="POST" action="{{ url_for('admin.update_booking_status', booking_id=b.id) }}" class="inline-form" onsubmit="return validateCancellationForm(this)">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <select name="status" onchange="handleStatusChange(this)">
+                            {% for s in ["pending", "completed", "cancelled"] %}
+                            <option value="{{ s }}" {% if b.status == s %}selected{% endif %}>{{ s | replace('_', ' ') | title }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="text" name="cancellation_reason" class="reason-input" placeholder="Cancellation reason..." style="display:none; padding:6px 8px; font-size:0.8rem; width:160px; border:1px solid var(--line); border-radius:2px;" value="{{ b.cancellation_reason or '' }}">
+                        <button type="submit" class="btn" style="padding:7px 14px;font-size:0.78rem">Save</button>
+                    </form>
+                </div>
             </td>
         </tr>
         {% else %}
         <tr>
-            <td colspan="7" style="text-align:center;padding:32px">
+            <td colspan="6" style="text-align:center;padding:32px">
                 <span class="muted">No cancelled bookings.</span>
             </td>
         </tr>
@@ -137,4 +150,53 @@
     </tbody>
 </table>
 </div>
+
+<script>
+function handleStatusChange(selectElem) {
+    const form = selectElem.form;
+    const reasonInput = form.querySelector('.reason-input');
+    if (reasonInput) {
+        if (selectElem.value === 'cancelled') {
+            reasonInput.style.display = 'inline-block';
+            reasonInput.required = true;
+            reasonInput.focus();
+        } else {
+            reasonInput.style.display = 'none';
+            reasonInput.required = false;
+        }
+    }
+}
+
+function validateCancellationForm(form) {
+    const statusSelect = form.querySelector('select[name="status"]');
+    const reasonInput = form.querySelector('.reason-input');
+    if (statusSelect && statusSelect.value === 'cancelled') {
+        if (!reasonInput || !reasonInput.value.trim()) {
+            alert('Please enter a valid cancellation reason for the customer before saving.');
+            if (reasonInput) {
+                reasonInput.style.display = 'inline-block';
+                reasonInput.required = true;
+                reasonInput.focus();
+            }
+            return false;
+        }
+    }
+    return true;
+}
+
+function sendWhatsAppWithPrompt(btn) {
+    const msg = btn.getAttribute('data-msg');
+    const phone = prompt("Enter customer phone number to send WhatsApp cancellation message:");
+    if (phone) {
+        let digits = phone.replace(/\D/g, '');
+        if (digits.length === 10) digits = '91' + digits;
+        if (digits) {
+            const url = 'https://wa.me/' + digits + '?text=' + encodeURIComponent(msg);
+            window.open(url, '_blank');
+        } else {
+            alert("Please enter a valid phone number.");
+        }
+    }
+}
+</script>
 {% endblock %}

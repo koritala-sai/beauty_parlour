@@ -9,10 +9,14 @@
 <div class="admin-nav">
     <a href="{{ url_for('admin.dashboard') }}" class="btn-outline">← Dashboard</a>
     <a href="{{ url_for('admin.manage_staff') }}" class="btn-outline">👤 Staff</a>
+    <a href="{{ url_for('admin.manage_promos') }}" class="btn-outline">🏷️ Promos</a>
+    <a href="{{ url_for('admin.manage_reviews') }}" class="btn-outline">⭐ Moderation</a>
 </div>
 
 <h2>Add a New Service</h2>
 <form method="POST" action="{{ url_for('admin.add_service') }}" class="form" style="max-width:520px">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
     <label for="name">Service Name</label>
     <input type="text" name="name" id="name" required placeholder="e.g. Hair Colour Treatment">
 
@@ -61,6 +65,7 @@
             </td>
             <td>
                 <form method="POST" action="{{ url_for('admin.toggle_service', service_id=s.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn-link">
                         {{ "Deactivate" if s.is_active else "Activate" }}
                     </button>

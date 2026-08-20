@@ -8,6 +8,8 @@
 <div class="divider left"><span class="mark"></span></div>
 
 <form method="POST" class="form" autocomplete="on">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
     <label for="name">Full Name</label>
     <input type="text" name="name" id="name" required
            autocomplete="name" placeholder="e.g. Priya Sharma">
@@ -23,8 +25,8 @@
 
     <label for="password">Password</label>
     <div class="input-toggle-wrap">
-        <input type="password" name="password" id="password" required
-               autocomplete="new-password" placeholder="Create a strong password">
+        <input type="password" name="password" id="password" required minlength="8"
+               autocomplete="new-password" placeholder="Create a strong password (min 8 chars)">
         <button type="button" class="toggle-pw" id="toggle-pw" aria-label="Show password">
             <svg id="eye-icon" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
         </button>

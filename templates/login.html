@@ -8,6 +8,8 @@
 <div class="divider left"><span class="mark"></span></div>
 
 <form method="POST" class="form" autocomplete="on">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
     <label for="email">Email Address</label>
     <input type="email" name="email" id="email" required
            autocomplete="email" placeholder="you@example.com">

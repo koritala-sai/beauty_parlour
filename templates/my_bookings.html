@@ -27,12 +27,26 @@
             <td>{{ b.booking_date.strftime('%d %b %Y') if b.booking_date else b.booking_date }}</td>
             <td>{{ b.booking_time.strftime('%I:%M %p') if b.booking_time else b.booking_time }}</td>
             <td>{{ b.staff.name if b.staff else '—' }}</td>
-            <td class="price" style="margin:0;font-size:0.95rem">₹{{ b.service.price if b.service else '0.00' }}</td>
-            <td><span class="badge badge-{{ b.status }}">{{ b.status | replace('_', ' ') | title }}</span></td>
+            <td class="price" style="margin:0;font-size:0.95rem">
+                {% if b.discount_amount and b.discount_amount > 0 %}
+                <span style="text-decoration:line-through;color:var(--muted);font-size:0.82rem">₹{{ b.service.price if b.service else '0.00' }}</span><br>
+                <strong>₹{{ b.final_price }}</strong>
+                <br><span class="badge badge-pending" style="font-size:0.65rem">₹{{ b.discount_amount }} OFF</span>
+                {% else %}
+                ₹{{ b.service.price if b.service else '0.00' }}
+                {% endif %}
+            </td>
+            <td>
+                <span class="badge badge-{{ b.status }}">{{ b.status | replace('_', ' ') | title }}</span>
+                {% if b.status == "cancelled" and b.cancellation_reason %}
+                <br><small style="color:#8a2f37; font-size:0.75rem;">Reason: {{ b.cancellation_reason }}</small>
+                {% endif %}
+            </td>
             <td>
                 {% if b.status not in ["cancelled", "completed"] %}
                 <form method="POST" action="{{ url_for('booking.cancel_booking', booking_id=b.id) }}"
                       onsubmit="return confirm('Are you sure you want to cancel this booking?')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn-link" style="color:#8a2f37">Cancel</button>
                 </form>
                 {% elif b.status == "completed" %}

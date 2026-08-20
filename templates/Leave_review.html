@@ -7,6 +7,8 @@
 <div class="divider left"><span class="mark"></span></div>
 
 <form method="POST" class="form" style="max-width:480px">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
     <label>Your Rating</label>
     <div class="star-input" id="star-input" role="radiogroup" aria-label="Star rating">
         {% for i in range(1, 6) %}

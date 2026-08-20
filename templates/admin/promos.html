@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Manage Promo Codes — Admin{% endblock %}
+
+{% block content %}
+<p class="eyebrow">Owner Panel</p>
+<h1>Manage Promo Codes</h1>
+<div class="divider left"><span class="mark"></span></div>
+
+<div class="admin-nav">
+    <a href="{{ url_for('admin.dashboard') }}" class="btn-outline">← Dashboard</a>
+    <a href="{{ url_for('admin.manage_services') }}" class="btn-outline">✂️ Services</a>
+    <a href="{{ url_for('admin.manage_staff') }}" class="btn-outline">👤 Staff</a>
+    <a href="{{ url_for('admin.manage_reviews') }}" class="btn-outline">⭐ Moderation</a>
+</div>
+
+<h2>Create New Promo Code</h2>
+<form method="POST" action="{{ url_for('admin.add_promo') }}" class="form" style="max-width:520px">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <label for="code">Promo Code Name</label>
+    <input type="text" name="code" id="code" required placeholder="e.g. FIRST20 or GLOW100" style="text-transform:uppercase">
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+            <label for="discount_percent">Discount (%)</label>
+            <input type="number" step="0.01" min="0" max="100" name="discount_percent" id="discount_percent" value="0" placeholder="e.g. 20">
+        </div>
+        <div>
+            <label for="discount_flat">Flat Discount (₹)</label>
+            <input type="number" step="0.01" min="0" name="discount_flat" id="discount_flat" value="0" placeholder="e.g. 100">
+        </div>
+    </div>
+
+    <label for="min_order">Minimum Order Amount (₹)</label>
+    <input type="number" step="0.01" min="0" name="min_order" id="min_order" value="0">
+
+    <label for="max_uses">Max Redemptions <span class="muted">(leave blank for unlimited)</span></label>
+    <input type="number" min="1" name="max_uses" id="max_uses" placeholder="e.g. 50">
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+            <label for="valid_from">Valid From</label>
+            <input type="date" name="valid_from" id="valid_from">
+        </div>
+        <div>
+            <label for="valid_until">Valid Until</label>
+            <input type="date" name="valid_until" id="valid_until">
+        </div>
+    </div>
+
+    <button type="submit" class="btn" id="add-promo-btn">Create Promo Code</button>
+</form>
+
+<h2>Existing Promo Codes</h2>
+<div style="overflow-x:auto">
+<table class="table">
+    <thead>
+        <tr>
+            <th>Code</th>
+            <th>Discount</th>
+            <th>Min Order</th>
+            <th>Usage</th>
+            <th>Valid Dates</th>
+            <th>Status</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for p in promos %}
+        <tr>
+            <td><strong><code>{{ p.code }}</code></strong></td>
+            <td>
+                {% if p.discount_percent and p.discount_percent > 0 %}
+                {{ p.discount_percent }}% OFF
+                {% endif %}
+                {% if p.discount_flat and p.discount_flat > 0 %}
+                {% if p.discount_percent and p.discount_percent > 0 %} / {% endif %}
+                ₹{{ p.discount_flat }} OFF
+                {% endif %}
+            </td>
+            <td>₹{{ p.min_order or 0 }}</td>
+            <td>{{ p.used_count or 0 }} / {{ p.max_uses if p.max_uses else '∞' }}</td>
+            <td>
+                <span class="muted" style="font-size:0.83rem">
+                    {{ p.valid_from.strftime('%d %b %Y') if p.valid_from else 'Anytime' }} —
+                    {{ p.valid_until.strftime('%d %b %Y') if p.valid_until else 'No expiration' }}
+                </span>
+            </td>
+            <td>
+                <span class="badge {{ 'badge-confirmed' if p.is_active else 'badge-cancelled' }}">
+                    {{ "Active" if p.is_active else "Inactive" }}
+                </span>
+            </td>
+            <td>
+                <div style="display:flex;gap:8px;align-items:center;justify-content:center">
+                    <form method="POST" action="{{ url_for('admin.toggle_promo', promo_id=p.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn-link">
+                            {{ "Deactivate" if p.is_active else "Activate" }}
+                        </button>
+                    </form>
+                    <form method="POST" action="{{ url_for('admin.delete_promo', promo_id=p.id) }}"
+                          onsubmit="return confirm('Delete this promo code?')">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn-danger" style="padding:4px 10px;font-size:0.75rem">
+                            Delete
+                        </button>
+                    </form>
+                </div>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" style="text-align:center;padding:32px"><span class="muted">No promo codes created yet.</span></td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}
