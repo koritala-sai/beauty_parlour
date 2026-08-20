@@ -33,10 +33,9 @@ def create_app():
     app.register_blueprint(api_bp)
 
     return app
-
+app = create_app()
 
 if __name__ == "__main__":
-    app = create_app()
     with app.app_context():
         db.create_all()  # creates tables in MySQL if they don't exist yet
     app.run(debug=True)
