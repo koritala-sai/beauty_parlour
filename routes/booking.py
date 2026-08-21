@@ -126,11 +126,17 @@ def book_service(service_id):
         )
         db.session.add(new_booking)
 
-        # Increment promo usage count
         if promo:
             promo.used_count = (promo.used_count or 0) + 1
 
-        db.session.commit()
+        try:
+           db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            from flask import current_app
+            current_app.logger.error(f"Error saving booking: {e}")
+            flash("Unable to save your booking. Please try again.", "error")
+            return redirect(url_for("booking.book_service", service_id=service.id))
 
         try:
             send_booking_confirmation_email(new_booking)
@@ -139,9 +145,13 @@ def book_service(service_id):
             current_app.logger.error(f"Error sending confirmation email: {e}")
 
         if discount_amount > 0:
-            flash(f"Booking submitted with ₹{discount_amount} discount applied! We'll confirm it shortly.", "success")
+            flash(
+                f"Booking submitted with ₹{discount_amount} discount applied! We'll confirm it shortly.",
+                "success"
+            )
         else:
             flash("Booking request submitted! We'll confirm it shortly.", "success")
+
         return redirect(url_for("booking.my_bookings"))
 
     return render_template("booking.html", service=service, staff_members=staff_members,
