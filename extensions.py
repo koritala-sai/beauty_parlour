@@ -5,16 +5,29 @@ from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-# Created here (not inside app.py) so both models.py and routes can import
-# them without circular-import problems.
+
+# Database
 db = SQLAlchemy()
+
+
+# Login manager
 login_manager = LoginManager()
 login_manager.login_view = "auth.login"
 login_manager.login_message = "Please log in to continue."
+login_manager.login_message_category = "error"
+
+
+# Email
 mail = Mail()
+
+
+# CSRF protection
 csrf = CSRFProtect()
+
+
+# Rate limiting
 limiter = Limiter(
     key_func=get_remote_address,
-    default_limits=[],           # no blanket limit — applied per-route
-    storage_uri="memory://",     # in-memory for dev; swap to Redis in prod
+    default_limits=[],
+    storage_uri="memory://",
 )

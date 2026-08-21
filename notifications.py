@@ -4,96 +4,254 @@ from flask_mail import Message
 from extensions import mail
 
 
+def _email_is_configured():
+    """Check whether email credentials are configured."""
+    username = current_app.config.get("MAIL_USERNAME")
+    password = current_app.config.get("MAIL_PASSWORD")
+
+    return bool(username and password)
+
+
+def _format_date(booking):
+    if booking.booking_date:
+        return booking.booking_date.strftime("%d %b %Y")
+    return "Not available"
+
+
+def _format_time(booking):
+    if booking.booking_time:
+        return booking.booking_time.strftime("%I:%M %p")
+    return "Not available"
+
+
+def _get_customer(booking):
+    return booking.customer
+
+
+def _get_service_name(booking):
+    if booking.service:
+        return booking.service.name
+    return "Appointment"
+
+
+def _get_staff_name(booking):
+    if booking.staff:
+        return booking.staff.name
+    return "No preference"
+
+
 def send_booking_confirmation_email(booking):
-    """Sends a confirmation email to the customer right after they book.
-    Failures are logged but never crash the booking flow — a booking
-    should still succeed even if the email fails to send."""
-
-    if not current_app.config.get("MAIL_USERNAME"):
-        current_app.logger.warning("MAIL_USERNAME not configured — skipping confirmation email.")
-        return False
-
-    customer = booking.customer
-    service = booking.service
-
-    subject = f"Booking Confirmed — {service.name} at Glow Studio"
-
-    html_body = f"""
-    <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-        <h2 style="color:#6b2737;">Glow Studio</h2>
-        <p>Hi {customer.name},</p>
-        <p>Your appointment has been booked. Here are the details:</p>
-        <table style="width:100%; border-collapse:collapse; margin:16px 0;">
-            <tr><td style="padding:6px 0;"><strong>Service</strong></td><td>{service.name}</td></tr>
-            <tr><td style="padding:6px 0;"><strong>Date</strong></td><td>{booking.booking_date}</td></tr>
-            <tr><td style="padding:6px 0;"><strong>Time</strong></td><td>{booking.booking_time}</td></tr>
-            <tr><td style="padding:6px 0;"><strong>Status</strong></td><td>{booking.status}</td></tr>
-        </table>
-        <p>We'll see you soon!</p>
-        <p style="color:#8a7a76; font-size:0.85rem;">— Glow Studio</p>
-    </div>
     """
+    Sends booking confirmation/request email.
 
-    text_body = (
-        f"Hi {customer.name},\n\n"
-        f"Your appointment is booked.\n"
-        f"Service: {service.name}\n"
-        f"Date: {booking.booking_date}\n"
-        f"Time: {booking.booking_time}\n"
-        f"Status: {booking.status}\n\n"
-        f"— Glow Studio"
-    )
-
+    IMPORTANT:
+    This function never raises an exception to the booking route.
+    If email fails, booking should still work normally.
+    """
     try:
-        msg = Message(subject=subject, recipients=[customer.email])
-        msg.body = text_body
-        msg.html = html_body
-        mail.send(msg)
-        return True
-    except Exception as e:
-        current_app.logger.error(f"Failed to send confirmation email: {e}")
-        return False
-
-
-def send_booking_cancellation_email(booking, reason=None):
-    try:
-        if not current_app.config.get("MAIL_USERNAME"):
+        if not _email_is_configured():
             current_app.logger.warning(
-                "MAIL_USERNAME not configured - skipping cancellation email"
+                "Email not sent: MAIL_USERNAME or MAIL_PASSWORD is missing."
             )
             return False
 
-        customer = booking.customer
-        service = booking.service
+        customer = _get_customer(booking)
 
         if not customer or not customer.email:
+            current_app.logger.warning(
+                "Booking confirmation email skipped: customer email not available."
+            )
             return False
 
-        subject = "Your Glow Studio Booking Has Been Cancelled"
+        service_name = _get_service_name(booking)
+        date_text = _format_date(booking)
+        time_text = _format_time(booking)
+        staff_name = _get_staff_name(booking)
+
+        final_price = booking.final_price
+
+        subject = "Glow Studio - Booking Received ✨"
 
         text_body = f"""
-Hi {customer.name},
+Hello {customer.name},
 
-Your appointment has been cancelled.
+Thank you for booking with Glow Studio!
 
-Service: {service.name}
-Date: {booking.booking_date}
-Time: {booking.booking_time}
+Your booking details:
 
-{f"Reason: {reason}" if reason else ""}
+Service: {service_name}
+Date: {date_text}
+Time: {time_text}
+Stylist: {staff_name}
+Amount: ₹{final_price}
+Status: {booking.status.title()}
 
-— Glow Studio
-"""
+Your booking request has been received successfully.
+We will confirm your appointment shortly.
+
+Thank you,
+Glow Studio
+""".strip()
+
+        html_body = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6;">
+            <h2>✨ Booking Received - Glow Studio</h2>
+
+            <p>Hello <strong>{customer.name}</strong>,</p>
+
+            <p>
+                Thank you for booking with Glow Studio.
+                Your appointment request has been received successfully.
+            </p>
+
+            <h3>Booking Details</h3>
+
+            <ul>
+                <li><strong>Service:</strong> {service_name}</li>
+                <li><strong>Date:</strong> {date_text}</li>
+                <li><strong>Time:</strong> {time_text}</li>
+                <li><strong>Stylist:</strong> {staff_name}</li>
+                <li><strong>Amount:</strong> ₹{final_price}</li>
+                <li><strong>Status:</strong> {booking.status.title()}</li>
+            </ul>
+
+            <p>We'll confirm your appointment shortly.</p>
+
+            <p>
+                Regards,<br>
+                <strong>Glow Studio</strong>
+            </p>
+        </body>
+        </html>
+        """
 
         msg = Message(
             subject=subject,
-            recipients=[customer.email]
+            recipients=[customer.email],
+            body=text_body,
+            html=html_body,
         )
-        msg.body = text_body
 
         mail.send(msg)
+
+        current_app.logger.info(
+            "Booking confirmation email sent successfully for booking %s",
+            booking.id
+        )
+
         return True
 
-    except Exception as e:
-        current_app.logger.error(f"Failed to send cancellation email: {e}")
+    except Exception:
+        current_app.logger.exception(
+            "Booking confirmation email failed for booking %s",
+            getattr(booking, "id", "unknown")
+        )
+        return False
+
+
+def send_booking_cancellation_email(booking):
+    """
+    Sends cancellation email.
+
+    Email failure will NEVER cancel/rollback the actual cancellation.
+    """
+    try:
+        if not _email_is_configured():
+            current_app.logger.warning(
+                "Cancellation email not sent: email configuration is missing."
+            )
+            return False
+
+        customer = _get_customer(booking)
+
+        if not customer or not customer.email:
+            current_app.logger.warning(
+                "Cancellation email skipped: customer email not available."
+            )
+            return False
+
+        service_name = _get_service_name(booking)
+        date_text = _format_date(booking)
+        time_text = _format_time(booking)
+
+        reason = booking.cancellation_reason or "No reason was provided."
+
+        subject = "Glow Studio - Booking Cancelled"
+
+        text_body = f"""
+Hello {customer.name},
+
+Your appointment has been cancelled.
+
+Booking Details:
+
+Service: {service_name}
+Date: {date_text}
+Time: {time_text}
+
+Reason:
+{reason}
+
+You can visit Glow Studio and book another convenient appointment.
+
+Regards,
+Glow Studio
+""".strip()
+
+        html_body = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6;">
+            <h2>Booking Cancelled</h2>
+
+            <p>Hello <strong>{customer.name}</strong>,</p>
+
+            <p>Your appointment has been cancelled.</p>
+
+            <h3>Booking Details</h3>
+
+            <ul>
+                <li><strong>Service:</strong> {service_name}</li>
+                <li><strong>Date:</strong> {date_text}</li>
+                <li><strong>Time:</strong> {time_text}</li>
+            </ul>
+
+            <p>
+                <strong>Reason:</strong><br>
+                {reason}
+            </p>
+
+            <p>
+                You can book another appointment at a convenient time.
+            </p>
+
+            <p>
+                Regards,<br>
+                <strong>Glow Studio</strong>
+            </p>
+        </body>
+        </html>
+        """
+
+        msg = Message(
+            subject=subject,
+            recipients=[customer.email],
+            body=text_body,
+            html=html_body,
+        )
+
+        mail.send(msg)
+
+        current_app.logger.info(
+            "Cancellation email sent successfully for booking %s",
+            booking.id
+        )
+
+        return True
+
+    except Exception:
+        current_app.logger.exception(
+            "Cancellation email failed for booking %s",
+            getattr(booking, "id", "unknown")
+        )
         return False
