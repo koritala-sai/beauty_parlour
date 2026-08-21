@@ -51,6 +51,7 @@ def book_service(service_id):
 
     all_promos = PromoCode.query.filter_by(is_active=True).all()
     active_promos = [p for p in all_promos if p.is_valid(order_total=float(service.price))[0]]
+    discount_amount = 0
 
     if request.method == "POST":
         date_str = request.form.get("booking_date")
@@ -96,7 +97,6 @@ def book_service(service_id):
 
         # --- Promo code handling ---
         promo = None
-        discount_amount = 0
         if promo_code_str:
             promo = PromoCode.query.filter_by(code=promo_code_str).first()
             if not promo:
@@ -129,6 +129,8 @@ def book_service(service_id):
         # Increment promo usage count
         if promo:
             promo.used_count = (promo.used_count or 0) + 1
+
+        db.session.commit()
 
         try:
             send_booking_confirmation_email(new_booking)
