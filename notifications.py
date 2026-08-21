@@ -209,7 +209,7 @@ def send_booking_confirmation_email(booking):
             current_app.config.get("MAIL_FROM") or ""
         ).strip()
 
-        subject = "Glow Studio - Booking Received"
+        subject = "Glow Studio - Booking Confirmed"
 
         html_body = f"""
         <!DOCTYPE html>
@@ -218,13 +218,13 @@ def send_booking_confirmation_email(booking):
                      line-height: 1.6;
                      color: #333;">
 
-            <h2>Booking Received - Glow Studio</h2>
+            <h2>Booking Confirmed - Glow Studio</h2>
 
             <p>Hello <strong>{customer_name}</strong>,</p>
 
             <p>
                 Thank you for booking with Glow Studio.
-                Your appointment request has been received successfully.
+                Your appointment request has been confirmed successfully.
             </p>
 
             <h3>Booking Details</h3>
@@ -262,10 +262,6 @@ def send_booking_confirmation_email(booking):
             </ul>
 
             <p>
-                We'll confirm your appointment shortly.
-            </p>
-
-            <p>
                 Regards,<br>
                 <strong>Glow Studio</strong>
             </p>
@@ -288,8 +284,7 @@ Stylist: {staff_name}
 Amount: ₹{final_price}
 Status: {str(status).title()}
 
-Your booking request has been received successfully.
-We will confirm your appointment shortly.
+Your booking request has been confirmed successfully.
 
 Regards,
 Glow Studio
