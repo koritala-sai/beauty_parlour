@@ -94,7 +94,7 @@ class Config:
     )
 
     MAIL_TIMEOUT = int(
-        os.environ.get("MAIL_TIMEOUT", "20")
+        os.environ.get("MAIL_TIMEOUT", "10")
     )
 
 
