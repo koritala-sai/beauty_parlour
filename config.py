@@ -9,22 +9,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def get_bool_env(name, default=False):
-    """Convert an environment variable to a boolean safely."""
-    value = os.environ.get(name)
-
-    if value is None:
-        return default
-
-    return value.strip().lower() in (
-        "1",
-        "true",
-        "yes",
-        "on",
-    )
-
-
 class Config:
+
     # =========================================================
     # Security
     # =========================================================
@@ -61,40 +47,18 @@ class Config:
 
 
     # =========================================================
-    # Email - Gmail SMTP
+    # Email - Resend HTTP API
     # =========================================================
 
-    MAIL_SERVER = os.environ.get(
-        "MAIL_SERVER",
-        "smtp.gmail.com",
-    )
+    # Railway variable: RESEND_API_KEY
+    RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
 
-    MAIL_PORT = int(
-        os.environ.get("MAIL_PORT", "587")
-    )
-
-    MAIL_USE_TLS = get_bool_env(
-        "MAIL_USE_TLS",
-        True,
-    )
-
-    MAIL_USE_SSL = get_bool_env(
-        "MAIL_USE_SSL",
-        False,
-    )
-
-    MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
-
-    # Use Gmail App Password, NOT normal Gmail password
-    MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
-
-    MAIL_DEFAULT_SENDER = os.environ.get(
-        "MAIL_DEFAULT_SENDER",
-        MAIL_USERNAME,
-    )
-
-    MAIL_TIMEOUT = int(
-        os.environ.get("MAIL_TIMEOUT", "10")
+    # Railway variable: MAIL_FROM
+    # Example:
+    # Glow Studio <onboarding@resend.dev>
+    MAIL_FROM = os.environ.get(
+        "MAIL_FROM",
+        "Glow Studio <onboarding@resend.dev>",
     )
 
 
@@ -119,6 +83,5 @@ class ProductionConfig(Config):
     SESSION_COOKIE_HTTPONLY = True
     REMEMBER_COOKIE_HTTPONLY = True
 
-    # Extra recommended settings
     SESSION_COOKIE_SAMESITE = "Lax"
     REMEMBER_COOKIE_SAMESITE = "Lax"

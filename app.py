@@ -3,7 +3,7 @@ import os
 from flask import Flask
 
 from config import Config, ProductionConfig
-from extensions import db, login_manager, mail, csrf, limiter
+from extensions import db, login_manager, csrf, limiter
 from models import User
 
 
@@ -19,7 +19,6 @@ def create_app():
     # Initialize extensions
     db.init_app(app)
     login_manager.init_app(app)
-    mail.init_app(app)
     csrf.init_app(app)
     limiter.init_app(app)
 
