@@ -130,9 +130,11 @@ def book_service(service_id):
         if promo:
             promo.used_count = (promo.used_count or 0) + 1
 
-        db.session.commit()
-
-        send_booking_confirmation_email(new_booking)
+        try:
+            send_booking_confirmation_email(new_booking)
+        except Exception as e:
+            from flask import current_app
+            current_app.logger.error(f"Error sending confirmation email: {e}")
 
         if discount_amount > 0:
             flash(f"Booking submitted with ₹{discount_amount} discount applied! We'll confirm it shortly.", "success")
