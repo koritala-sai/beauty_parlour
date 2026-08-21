@@ -133,16 +133,9 @@ def book_service(service_id):
            db.session.commit()
         except Exception as e:
             db.session.rollback()
-            from flask import current_app
             current_app.logger.error(f"Error saving booking: {e}")
             flash("Unable to save your booking. Please try again.", "error")
             return redirect(url_for("booking.book_service", service_id=service.id))
-
-        try:
-            send_booking_confirmation_email(new_booking)
-        except Exception as e:
-            from flask import current_app
-            current_app.logger.error(f"Error sending confirmation email: {e}")
 
         if discount_amount > 0:
             flash(
